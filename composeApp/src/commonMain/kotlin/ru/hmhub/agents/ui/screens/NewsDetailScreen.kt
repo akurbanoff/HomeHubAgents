@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,7 +42,7 @@ class NewsDetailScreen(
 ) : Screen {
     @Composable
     override fun Content() {
-        val element = list[id]
+        val element = remember {list[id]}
         val date = "14 Февраля 2024"
         val topTitle = "Новости"
 
@@ -55,68 +56,78 @@ class NewsDetailScreen(
                     .padding(it)
             ) {
                 item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 24.dp, bottom = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .background(
-                                    color = Color.LightGray,
-                                    shape = MaterialTheme.shapes.extraLarge
-                                )
-                        ) {
-                            Text(
-                                text = date,
-                                style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.padding(16.dp)
-                            )
-                        }
-                        Row {
-                            Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .clickable {  }
-                            )
-                            Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .clickable {  }
-                            )
-                        }
-                    }
-                    Text(
-                        text = element.first,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 16.dp),
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Image(
-                        painter = painterResource(Res.drawable.ic_test_realstate_obj),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .clip(MaterialTheme.shapes.medium)
-                            .height(200.dp)
-                            .fillMaxWidth(),
-                        contentScale = ContentScale.FillBounds
-                    )
-                    Text(
-                        text = element.second,
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(top = 16.dp)
-                    )
+                    TopNewsInfo(date = date)
+                    NewsBody(newsElement = element)
                 }
             }
         }
+    }
+
+    @Composable
+    private fun TopNewsInfo(modifier: Modifier = Modifier, date: String){
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(top = 24.dp, bottom = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .background(
+                        color = Color.LightGray,
+                        shape = MaterialTheme.shapes.extraLarge
+                    )
+            ) {
+                Text(
+                    text = date,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+            Row {
+                Icon(
+                    imageVector = Icons.Default.Share,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clickable {  }
+                )
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clickable {  }
+                )
+            }
+        }
+    }
+
+    @Composable
+    private fun NewsBody(modifier: Modifier = Modifier, newsElement: Pair<String, String>){
+        Text(
+            text = newsElement.first,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Image(
+            painter = painterResource(Res.drawable.ic_test_realstate_obj),
+            contentDescription = null,
+            modifier = Modifier
+                .clip(MaterialTheme.shapes.medium)
+                .height(200.dp)
+                .fillMaxWidth(),
+            contentScale = ContentScale.FillBounds
+        )
+        Text(
+            text = newsElement.second,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(top = 16.dp)
+        )
     }
 }

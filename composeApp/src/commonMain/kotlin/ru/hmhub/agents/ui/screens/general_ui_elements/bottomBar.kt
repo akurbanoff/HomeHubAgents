@@ -10,10 +10,20 @@ import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.EmojiEvents
+import androidx.compose.material.icons.outlined.Leaderboard
+import androidx.compose.material.icons.outlined.Newspaper
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -29,15 +39,18 @@ fun DefaultBottomBar(
     navigator: Navigator,
     currentPage: NavigationRoutes
 ){
+    val iconsSize = 44.dp
+    var isAppsIconClicked by remember { mutableStateOf(false) }
     BottomAppBar(
         containerColor = Color.Transparent
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = Icons.Default.Newspaper,
+                imageVector = Icons.Outlined.Newspaper,
                 contentDescription = null,
                 modifier = Modifier
                     .clickable {
@@ -45,11 +58,11 @@ fun DefaultBottomBar(
                             navigator.push(NewsScreen(navigator = navigator))
                         }
                     }
-                    .size(44.dp),
+                    .size(iconsSize),
                 tint = if(currentPage == NavigationRoutes.NewsScreen) MaterialTheme.colorScheme.primary else Color.Black
             )
             Icon(
-                imageVector = Icons.Default.EmojiEvents,
+                imageVector = Icons.Outlined.EmojiEvents,
                 contentDescription = null,
                 modifier = Modifier
                     .clickable {
@@ -58,11 +71,19 @@ fun DefaultBottomBar(
                             navigator.push(AchievementsScreen(navigator = navigator))
                         }
                     }
-                    .size(44.dp),
+                    .size(iconsSize),
                 tint = if(currentPage == NavigationRoutes.AchievementsScreen) MaterialTheme.colorScheme.primary else Color.Black
             )
             Icon(
-                imageVector = Icons.Default.Leaderboard,
+                imageVector = Icons.Outlined.Apps,
+                contentDescription = null,
+                modifier = Modifier
+                    .clickable { isAppsIconClicked = !isAppsIconClicked }
+                    .size(iconsSize),
+                tint = if(isAppsIconClicked) MaterialTheme.colorScheme.primary else Color.Black
+            )
+            Icon(
+                imageVector = Icons.Outlined.Leaderboard,
                 contentDescription = null,
                 modifier = Modifier
                     .clickable {
@@ -71,11 +92,11 @@ fun DefaultBottomBar(
                             navigator.push(RatingScreen(navigator = navigator))
                         }
                     }
-                    .size(44.dp),
+                    .size(iconsSize),
                 tint = if(currentPage == NavigationRoutes.RatingScreen) MaterialTheme.colorScheme.primary else Color.Black
             )
             Icon(
-                imageVector = Icons.Default.Person,
+                imageVector = Icons.Outlined.Person,
                 contentDescription = null,
                 modifier = Modifier
                     .clickable {
@@ -84,7 +105,7 @@ fun DefaultBottomBar(
                             navigator.push(ProfileScreen(id = 0, navigator = navigator))
                         }
                     }
-                    .size(44.dp),
+                    .size(iconsSize),
                 tint = if(currentPage == NavigationRoutes.ProfileScreen) MaterialTheme.colorScheme.primary else Color.Black
             )
         }

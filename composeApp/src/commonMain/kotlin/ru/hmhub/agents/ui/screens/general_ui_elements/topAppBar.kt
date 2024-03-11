@@ -4,6 +4,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -78,22 +81,26 @@ fun DefaultTopAppBar(
             if(isAccountShowable && !isUserAdmin){
                 Row(
                     modifier = Modifier
+                        .fillMaxHeight()
                         .clickable {
                             navigator.push(MarketScreen(id = 0, navigator = navigator))
-                        },
+                        }
+                        .padding(4.dp)
+                        .align(Alignment.Bottom),
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = "100",
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyLarge
                     )
                     Image(
                         painter = painterResource(Res.drawable.ic_hubcoin),
                         contentDescription = null,
                         modifier = Modifier
                             .clip(CircleShape)
-                            .size(30.dp)
+                            .size(20.dp)
                     )
                 }
             } else if(isUserAdmin && !isAccountShowable){
@@ -103,6 +110,7 @@ fun DefaultTopAppBar(
                     modifier = Modifier
                         .clickable { navigator.push(AdminScreen(navigator = navigator)) }
                         .size(44.dp)
+                        .padding(4.dp)
                 )
             }
         }

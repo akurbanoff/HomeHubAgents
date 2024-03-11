@@ -43,6 +43,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.transitions.SlideTransition
 import org.koin.core.logger.Logger
 import ru.hmhub.agents.remote.RemoteApi
+import ru.hmhub.agents.remote.RemoteRepository
 import ru.hmhub.agents.ui.screens.LoginScreen
 import ru.hmhub.agents.ui.theme.HomeHubTheme
 import ru.hmhub.agents.ui.theme.LocalThemeIsDark
@@ -54,11 +55,12 @@ internal fun App() = HomeHubTheme {
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        val remoteApi = RemoteApi()
-        val remoteViewModel = RemoteViewModel(remoteApi)
-        val state by remoteViewModel.state.collectAsState()
-        println(state.employees.toString())
-        Navigator(LoginScreen(), onBackPressed = {false}){
+        val remoteApi = remember {RemoteApi()}
+        val remoteRepository = remember { RemoteRepository(remoteApi) }
+        val remoteViewModel = remember {RemoteViewModel(remoteRepository)}
+        //val state by remoteViewModel.state.collectAsState()
+
+        Navigator(LoginScreen(remoteViewModel = remoteViewModel), onBackPressed = {false}){
             SlideTransition(it, animationSpec = tween(durationMillis = 500, delayMillis = 100))
         }
     }

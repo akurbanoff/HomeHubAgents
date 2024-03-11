@@ -15,11 +15,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.MilitaryTech
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -30,6 +32,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,11 +57,11 @@ import ru.hmhub.agents.ui.screens.general_ui_elements.DefaultBottomBar
 import ru.hmhub.agents.ui.screens.general_ui_elements.DefaultTopAppBar
 
 private val list1 = listOf<Pair<String, DrawableResource>>(
-    "Андрей Васильевич Ребров" to Res.drawable.ic_photo,
-    "Андрей Васильевич Ребров" to Res.drawable.ic_photo,
-    "Андрей Васильевич Ребров" to Res.drawable.ic_photo,
-    "Андрей Васильевич Ребров" to Res.drawable.ic_photo,
-    "Андрей Васильевич Ребров" to Res.drawable.ic_photo,
+    "Ребров A.B." to Res.drawable.ic_photo,
+    "Ребров A.B." to Res.drawable.ic_photo,
+    "Ребров A.B." to Res.drawable.ic_photo,
+    "Ребров A.B." to Res.drawable.ic_photo,
+    "Ребров A.B." to Res.drawable.ic_photo,
 )
 
 class RatingScreen(
@@ -68,7 +71,7 @@ class RatingScreen(
     override fun Content() {
         val title = "Рейтинг"
 
-        var openMenu by remember { mutableStateOf(false) }
+        var openMenu = remember { mutableStateOf(false) }
 
         Scaffold(
             topBar = { DefaultTopAppBar(title = title, navigator = navigator) },
@@ -81,27 +84,7 @@ class RatingScreen(
                     .fillMaxSize()
             ) {
                 item {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier.background(
-                                color = Color.LightGray,
-                                shape = MaterialTheme.shapes.large
-                            )
-                        ) {
-                            Text(
-                                text = "ТОП 10",
-                                modifier = Modifier
-                                    .padding(8.dp)
-                                    .align(Alignment.Center),
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.headlineSmall
-                            )
-                        }
-                    }
+                    HeaderElement()
                 }
                 item {
                     Column(
@@ -112,7 +95,7 @@ class RatingScreen(
                             contentAlignment = Alignment.CenterEnd
                         ) {
                             OutlinedButton(
-                                onClick = { openMenu = !openMenu },
+                                onClick = { openMenu.value = !openMenu.value },
                                 shape = MaterialTheme.shapes.medium,
                                 contentPadding = PaddingValues(4.dp),
                                 modifier = Modifier.align(Alignment.CenterEnd)
@@ -124,74 +107,104 @@ class RatingScreen(
                                     tint = Color.Black
                                 )
                             }
-                            DropdownMenu(
-                                expanded = openMenu,
-                                onDismissRequest = { openMenu = false },
-                                modifier = Modifier.clip(MaterialTheme.shapes.medium)
-                            ) {
-                                DropdownMenuItem(
-                                    text = {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(text = "по доходу")
-                                            Icon(
-                                                imageVector = Icons.Default.AttachMoney,
-                                                contentDescription = null
-                                            )
-                                        }
-                                    },
-                                    onClick = { /*TODO*/ }
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(text = "по рангу")
-                                            Icon(
-                                                imageVector = Icons.Default.MilitaryTech,
-                                                contentDescription = null
-                                            )
-                                        }
-                                    },
-                                    onClick = { /*TODO*/ }
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(text = "по количеству HC")
-                                            Image(
-                                                painter = painterResource(Res.drawable.ic_hubcoin),
-                                                contentDescription = null,
-                                                modifier = Modifier
-                                                    .clip(CircleShape)
-                                                    .size(20.dp)
-                                            )
-                                        }
-                                    },
-                                    onClick = { /*TODO*/ }
-                                )
-                            }
+                            Menu(openMenu = openMenu)
                         }
                     }
                 }
-                items(list1){
-                    RatingPerson(name = it.first, photo = it.second, navigator = navigator)
+                itemsIndexed(list1){ index, item ->
+                    RatingPerson(name = item.first, photo = item.second, navigator = navigator, index = index + 1)
                 }
             }
         }
     }
 
     @Composable
-    fun RatingPerson(name: String, photo: DrawableResource, navigator: Navigator) {
+    private fun HeaderElement(modifier: Modifier = Modifier){
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier.background(
+                    color = Color.LightGray,
+                    shape = MaterialTheme.shapes.large
+                )
+            ) {
+                Text(
+                    text = "ТОП 10",
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .align(Alignment.Center),
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.headlineSmall
+                )
+            }
+        }
+    }
+
+    @Composable
+    private fun Menu(modifier: Modifier = Modifier, openMenu: MutableState<Boolean>){
+        DropdownMenu(
+            expanded = openMenu.value,
+            onDismissRequest = { openMenu.value = false },
+            modifier = Modifier.clip(MaterialTheme.shapes.medium)
+        ) {
+            DropdownMenuItem(
+                text = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = "по доходу")
+                        Icon(
+                            imageVector = Icons.Default.AttachMoney,
+                            contentDescription = null
+                        )
+                    }
+                },
+                onClick = { /*TODO*/ }
+            )
+            DropdownMenuItem(
+                text = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = "по рангу")
+                        Icon(
+                            imageVector = Icons.Default.MilitaryTech,
+                            contentDescription = null
+                        )
+                    }
+                },
+                onClick = { /*TODO*/ }
+            )
+            DropdownMenuItem(
+                text = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = "по количеству HC")
+                        Image(
+                            painter = painterResource(Res.drawable.ic_hubcoin),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .size(20.dp)
+                        )
+                    }
+                },
+                onClick = { /*TODO*/ }
+            )
+        }
+    }
+
+    @Composable
+    private fun RatingPerson(name: String, photo: DrawableResource, navigator: Navigator, index: Int) {
         val rank = "продвинутый"
-        val achieve = "10,5 млн руб. за год"
+        val achieve = "10,5 млн р."
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -207,37 +220,60 @@ class RatingScreen(
                 ),
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Image(
-                        painter = painterResource(photo),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .clip(MaterialTheme.shapes.medium)
-                            .size(height = 70.dp, width = 70.dp),
-                        contentScale = ContentScale.FillBounds,
-                    )
+                    Row {
+                        Image(
+                            painter = painterResource(photo),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .size(height = 70.dp, width = 70.dp)
+                                .align(Alignment.CenterVertically),
+                            contentScale = ContentScale.FillBounds,
+                        )
+                        Column(
+                            modifier = Modifier.align(Alignment.CenterVertically),
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = name,
+                                textAlign = TextAlign.Center,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = rank,
+                                textAlign = TextAlign.Center
+                            )
+//                        Text(
+//                            text = achieve,
+//                            modifier = Modifier.fillMaxWidth(),
+//                            textAlign = TextAlign.Center
+//                        )
+                        }
+                    }
                     Column(
-                        modifier = Modifier.fillMaxHeight(),
+                        modifier = Modifier.align(Alignment.CenterVertically),
                         verticalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            text = name,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Text(
-                            text = rank,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = achieve,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center
-                        )
+                        Row(
+                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Star,
+                                contentDescription = null,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Text(
+                                text = index.toString(),
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.headlineSmall
+                            )
+                        }
+                        Text(text = achieve)
                     }
                 }
             }
