@@ -58,8 +58,10 @@ import homehubagents.composeapp.generated.resources.Res
 import homehubagents.composeapp.generated.resources.ic_homehub
 import homehubagents.composeapp.generated.resources.ic_homehub_main
 import org.jetbrains.compose.resources.painterResource
-import ru.hmhub.agents.remote.serializables.EmployeeSerializable
+import ru.hmhub.agents.data.remote.serializables.EmployeeSerializable
 import ru.hmhub.agents.ui.screens.general_ui_elements.ElementDivider
+import ru.hmhub.agents.ui.screens.general_ui_elements.ScreenError
+import ru.hmhub.agents.ui.screens.general_ui_elements.ScreenLoading
 import ru.hmhub.agents.ui.states.UiState
 import ru.hmhub.agents.ui.view_models.RemoteViewModel
 
@@ -70,12 +72,13 @@ class LoginScreen(
     @Composable
     override fun Content() {
         val navigator: Navigator = LocalNavigator.currentOrThrow
-        remoteViewModel.getEmployees()
         val authState by remoteViewModel.authState.collectAsState()
 
         var userName = remember{ mutableStateOf("") }
         var password = remember{ mutableStateOf("") }
+        val isPasswordCorrect = remember{ mutableStateOf(true) }
         var userId = remember { mutableStateOf(999) }
+        val onLoginClicked = remember { mutableStateOf(false) }
 
         when(val state = authState.employeeState){
             is UiState.Error -> ScreenError(error = state.throwable, onRefresh = { remoteViewModel.getEmployees() })
@@ -87,8 +90,20 @@ class LoginScreen(
                     onLogin = { remoteViewModel.checkPassword(id = userId.value, password = password.value) },
                     userName = userName,
                     userId = userId,
-                    password = password
+                    password = password,
+                    onLoginClicked = onLoginClicked,
+                    isPasswordCorrect = isPasswordCorrect
                 )
+            }
+        }
+        if(onLoginClicked.value) {
+            when (val state = authState.checkPasswordState) {
+                is UiState.Error -> isPasswordCorrect.value = false
+                is UiState.Loading -> ScreenLoading()
+                is UiState.Success<*> -> remember{{
+                    navigator.pop()
+                    navigator.push(NewsScreen(navigator))
+                }}
             }
         }
     }
@@ -100,7 +115,9 @@ class LoginScreen(
         onLogin: () -> Unit,
         userName: MutableState<String>,
         userId: MutableState<Int>,
-        password: MutableState<String>
+        password: MutableState<String>,
+        onLoginClicked: MutableState<Boolean>,
+        isPasswordCorrect: MutableState<Boolean>
     ){
         Column(
             modifier = Modifier
@@ -115,12 +132,18 @@ class LoginScreen(
                 onLogin = onLogin,
                 userId = userId,
                 userName = userName,
-                password = password
+                password = password,
+                onLoginClicked = onLoginClicked,
+                isPasswordCorrect = isPasswordCorrect
             )
             ForgotPassword(modifier = Modifier.align(Alignment.End).padding(top = 16.dp))
             Spacer(modifier = Modifier.fillMaxHeight(0.25f))
             Button(
-                onClick = {navigator.push(RegistrationScreen(navigator = navigator, remoteViewModel = remoteViewModel))}, //navigator.navigate(NavigationRoutes.RegistrationScreen.route) },
+                onClick = {navigator.push(RegistrationScreen(
+                    navigator = navigator,
+                    remoteViewModel = remoteViewModel,
+                    employeesList = employeesList
+                ))},
                 shape = RoundedCornerShape(topEnd = 1000.dp, bottomEnd = 1000.dp, topStart = 0.dp, bottomStart = 0.dp),
                 modifier = Modifier.height(80.dp) // width = 200.dp
             ) {
@@ -180,7 +203,9 @@ class LoginScreen(
         onLogin: () -> Unit,
         userName: MutableState<String>,
         userId: MutableState<Int>,
-        password: MutableState<String>
+        password: MutableState<String>,
+        onLoginClicked: MutableState<Boolean>,
+        isPasswordCorrect: MutableState<Boolean>
     ){
         var openExpandedMenu by remember { mutableStateOf(false) }
         var isPasswordVisible by remember { mutableStateOf(false) }
@@ -242,8 +267,13 @@ class LoginScreen(
                     value = password.value,
                     onValueChange = {
                         password.value = it
+                        isPasswordCorrect.value = true
                     },
                     visualTransformation = if(isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(mask = '*'),
+                    isError = if(isPasswordCorrect.value) false else true,
+                    supportingText = {
+                        if(!isPasswordCorrect.value) Text("Вы ввели неправильный пароль")
+                    },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Lock,
@@ -265,7 +295,9 @@ class LoginScreen(
                         focusedContainerColor = Color.Gray,
                         unfocusedContainerColor = Color.Gray,
                         unfocusedIndicatorColor = Color.Transparent,
-                        focusedIndicatorColor = Color.Transparent
+                        focusedIndicatorColor = Color.Transparent,
+                        errorContainerColor = Color.Red,
+                        errorIndicatorColor = Color.Transparent
                     ),
                     shape = RoundedCornerShape(bottomEnd = 1000.dp, topStart = 0.dp, bottomStart = 0.dp),
                     modifier = Modifier
@@ -274,12 +306,9 @@ class LoginScreen(
             }
             Button(
                 onClick = {
-                    //navigator.popBackStack()
-                    //navigator.navigate(NavigationRoutes.NewsScreen.route)
+                    onLoginClicked.value = true
                     onLogin()
-                    navigator.pop()
-                    navigator.push(NewsScreen(navigator))
-                },
+                          },
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .size(70.dp),
@@ -291,32 +320,6 @@ class LoginScreen(
                     contentDescription = null,
                     modifier = Modifier.size(40.dp)
                 )
-            }
-        }
-    }
-
-    @Composable
-    private fun ScreenLoading(){
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(text = "Loading...")
-            CircularProgressIndicator()
-        }
-    }
-
-    @Composable
-    private fun ScreenError(error: Throwable, onRefresh: () -> Unit){
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(text = error.message ?: "Something wrong")
-            Button(onClick = onRefresh){
-                Text(text = "Refresh")
             }
         }
     }

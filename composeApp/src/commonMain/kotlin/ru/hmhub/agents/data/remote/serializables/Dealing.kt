@@ -1,4 +1,4 @@
-package ru.hmhub.agents.remote.serializables
+package ru.hmhub.agents.data.remote.serializables
 
 import kotlinx.serialization.Serializable
 

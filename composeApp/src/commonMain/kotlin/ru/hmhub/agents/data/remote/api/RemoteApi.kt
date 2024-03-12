@@ -1,33 +1,22 @@
-package ru.hmhub.agents.remote
+package ru.hmhub.agents.data.remote.api
 
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.cache.HttpCache
-import io.ktor.client.request.get
 import io.ktor.client.request.request
 import io.ktor.client.request.setBody
-import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
-import io.ktor.http.cio.Request
-import io.ktor.http.isSuccess
-import io.ktor.utils.io.core.toByteArray
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import ru.hmhub.agents.remote.responseSerializables.ClientResponse
-import ru.hmhub.agents.remote.responseSerializables.DealingResponse
-import ru.hmhub.agents.remote.responseSerializables.EmployeeResponse
-import ru.hmhub.agents.remote.serializables.Client
-import ru.hmhub.agents.remote.serializables.Dealing
-import ru.hmhub.agents.remote.serializables.EmployeeSerializable
-import ru.hmhub.agents.remote.serializables.InsertPassword
+import ru.hmhub.agents.data.remote.responseSerializables.DealingResponse
+import ru.hmhub.agents.data.remote.responseSerializables.EmployeeResponse
+import ru.hmhub.agents.data.remote.responseSerializables.PasswordResponse
+import ru.hmhub.agents.data.remote.serializables.Dealing
+import ru.hmhub.agents.data.remote.serializables.EmployeeSerializable
+import ru.hmhub.agents.data.remote.serializables.InsertPassword
 import ru.hmhub.agents.utils.HashUtils
-import ru.hmhub.agents.ui.states.UiState
 
 class RemoteApi: Api {
     private val client = HttpClient(CIO){install(HttpCache)}
@@ -41,7 +30,7 @@ class RemoteApi: Api {
         return employees.list
     }
 
-    override suspend fun getDealings(): List<Dealing> {
+    override suspend fun getDealings(skip: Int): List<Dealing> {
         val response = client.request(urlString = url + "/get_dealings") {
             method = HttpMethod.Get
         }.bodyAsText()
@@ -64,17 +53,30 @@ class RemoteApi: Api {
         val hash = HashUtils()
         val hashedPassword = hash.sha256(password)
         val doubleHashedPassword = hash.sha256(hashedPassword)
-        val response = client.request(urlString = url + "/insert_password") {
+        val response = client.request(urlString = url + "/insert_password?id=$id&password=$doubleHashedPassword") {
             method = HttpMethod.Post
-            this.setBody(InsertPassword(id = id, password = doubleHashedPassword))
+        }.bodyAsText()
+
+        val result = Json.decodeFromString<PasswordResponse>(response)
+        if(result.status in 400..<600){
+            throw Exception("Проблема на стороне сервера")
+        } else {
+            return HttpStatusCode(value = result.status, "")
         }
-        return response.status
     }
 
     override suspend fun checkPassword(id: Int, password: String): HttpStatusCode {
         val response = client.request(urlString = "$url/check_password?id=$id&password=$password") {
             method = HttpMethod.Get
+        }.bodyAsText()
+
+        val result = Json.decodeFromString<PasswordResponse>(response)
+        if(result.status in 400..<500){
+            throw IllegalArgumentException("Такого пользователя не существует либо введенный пароль неверен")
+        } else if(result.status in 500..<600) {
+            throw Exception("Проблема на стороне сервера")
+        } else {
+            return HttpStatusCode(value = result.status, "")
         }
-        return response.status
     }
 }

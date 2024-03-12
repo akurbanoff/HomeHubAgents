@@ -56,6 +56,8 @@ kotlin {
             implementation(libs.multiplatformSettings)
             implementation(libs.koin.core)
             implementation(libs.kamel)
+            implementation(libs.paging3.compose.common)
+            implementation(libs.paging3.common)
         }
 
         commonTest.dependencies {

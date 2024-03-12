@@ -9,26 +9,25 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import ru.hmhub.agents.remote.RemoteRepository
+import ru.hmhub.agents.data.pagingSources.PagingRepository
+import ru.hmhub.agents.data.remote.RemoteRepository
 import ru.hmhub.agents.ui.states.AuthState
 import ru.hmhub.agents.ui.states.UiState
 
 class RemoteViewModel(
-    val repository: RemoteRepository
+    private val remoteRepository: RemoteRepository,
+    private val pagingRepository: PagingRepository
 ): ViewModel() {
-//    private val _employees = MutableStateFlow(UiState.Loading())
-//        .flatMapLatest { repository.getEmployees() }
-//        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading())
-//
-//    private val _dealings = MutableStateFlow(emptyList<Dealing>())
-//        .flatMapLatest { repository.getDealings() }
-//        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading())
-//
+
+    init {
+        getEmployees()
+    }
+
     private val _employeeState = MutableStateFlow<UiState>(UiState.Loading())
     val employeeState = _employeeState.asStateFlow()
 
-    private val _dealingState = MutableStateFlow<UiState>(UiState.Loading())
-    val dealingState = _dealingState.asStateFlow()
+//    private val _dealingState = MutableStateFlow<UiState>(UiState.Loading())
+//    val dealingState = _dealingState.asStateFlow()
 
     private val _insertPasswordState = MutableStateFlow<UiState>(UiState.Loading())
     val insertPasswordState = _insertPasswordState.asStateFlow()
@@ -45,39 +44,28 @@ class RemoteViewModel(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AuthState())
 
-//    private val _clients = MutableStateFlow(emptyList<Client>())
-//        .flatMapLatest { api.getClients() }
-//        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-//    private val _state = MutableStateFlow(RemoteState())
-//    val state = combine(_employees, _dealings, _state){ employeeSerializables, dealings, remoteState ->
-//        remoteState.copy(
-//            employees = employeeSerializables,
-//            dealings = dealings
-//        )
-//    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), RemoteState())
     fun getEmployees(){
         viewModelScope.launch(Dispatchers.IO) {
             _employeeState.value = UiState.Loading()
-            repository.getEmployees().collect{ result ->
+            remoteRepository.getEmployees().collect{ result ->
                 _employeeState.value = result
             }
         }
     }
 
-    fun getDealings(){
-        viewModelScope.launch(Dispatchers.IO) {
-            _dealingState.value = UiState.Loading()
-            repository.getDealings().collect{ result ->
-                _dealingState.value = result
-            }
-        }
-    }
+//    fun getDealings(skip: Int = 0){
+//        viewModelScope.launch(Dispatchers.IO) {
+//            _dealingState.value = UiState.Loading()
+//            repository.getDealings(skip).collect{ result ->
+//                _dealingState.value = result
+//            }
+//        }
+//    }
 
     fun insertPassword(id: Int, password: String){
         viewModelScope.launch(Dispatchers.IO) {
             _insertPasswordState.value = UiState.Loading()
-            repository.insertPassword(id = id, password = password).collect{ result ->
+            remoteRepository.insertPassword(id = id, password = password).collect{ result ->
                 _insertPasswordState.value = result
             }
         }
@@ -86,7 +74,7 @@ class RemoteViewModel(
     fun checkPassword(id: Int, password: String){
         viewModelScope.launch(Dispatchers.IO) {
             _checkPasswordState.value = UiState.Loading()
-            repository.checkPassword(id, password).collect{ result ->
+            remoteRepository.checkPassword(id, password).collect{ result ->
                 _checkPasswordState.value = result
             }
         }
