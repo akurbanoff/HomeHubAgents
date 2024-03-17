@@ -25,12 +25,14 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,29 +42,37 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import cafe.adriel.voyager.core.screen.Screen
-import cafe.adriel.voyager.navigator.Navigator
 import homehubagents.composeapp.generated.resources.Res
-import homehubagents.composeapp.generated.resources.ic_achieve_car
-import homehubagents.composeapp.generated.resources.ic_achievement_icon_back
-import homehubagents.composeapp.generated.resources.ic_archive_card_back
-import homehubagents.composeapp.generated.resources.ic_test_profile
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
+import ru.hmhub.agents.data.in_memory.InMemoryHelper
 import ru.hmhub.agents.ui.navigation.NavigationRoutes
 import ru.hmhub.agents.ui.screens.general_ui_elements.DefaultBottomBar
+import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.navigator.Navigator
+import com.seiko.imageloader.rememberImagePainter
+import homehubagents.composeapp.generated.resources.ic_archive_card_back
+import homehubagents.composeapp.generated.resources.ic_achievement_icon_back
+import homehubagents.composeapp.generated.resources.ic_test_profile
 import ru.hmhub.agents.ui.screens.general_ui_elements.DefaultTopAppBar
+import ru.hmhub.agents.ui.view_models.RemoteViewModel
 
 class ProfileScreen(
     val id: Int,
-    val navigator: Navigator
+    val navigator: Navigator,
+    val inMemoryHelper: InMemoryHelper,
+    val remoteViewModel: RemoteViewModel
 ) : Screen {
+    val currentUser = inMemoryHelper.getCurrentUser()
+
     @Composable
     override fun Content() {
         val title = "Профиль"
+
+        val isUserAdmin = currentUser?.department?.name == "Руководство"
         Scaffold(
-            topBar = { DefaultTopAppBar(title = title, navigator = navigator, isAccountShowable = true) },
-            bottomBar = { DefaultBottomBar(navigator = navigator, currentPage = NavigationRoutes.ProfileScreen) },
+            topBar = { DefaultTopAppBar(title = title, navigator = navigator, isUserAdmin = isUserAdmin, isAccountShowable = !isUserAdmin, inMemoryHelper = inMemoryHelper, remoteViewModel = remoteViewModel) },
+            bottomBar = { DefaultBottomBar(navigator = navigator, currentPage = NavigationRoutes.ProfileScreen, inMemoryHelper = inMemoryHelper, remoteViewModel = remoteViewModel) },
             modifier = Modifier.padding(16.dp)
         ) {
             LazyColumn(
@@ -76,30 +86,24 @@ class ProfileScreen(
                     ArchiveBox(
                         text = "Достижения",
                         itemsAmount = list11.size,
-                        onClick = { navigator.push(AchievementsDetailScreen(navigator = navigator, userId = id)) },
+                        onClick = { navigator.push(AchievementsDetailScreen(navigator = navigator, inMemoryHelper = inMemoryHelper, remoteViewModel = remoteViewModel)) },
                         image = Res.drawable.ic_achievement_icon_back
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     ArchiveBox(
                         text = "Сделки",
                         itemsAmount = list12.size,
-                        onClick = {navigator.push(TradesScreen(navigator = navigator, id = 0))},
+                        onClick = {navigator.push(TradesScreen(navigator = navigator, inMemoryHelper = inMemoryHelper, remoteViewModel = remoteViewModel))},
                         image = Res.drawable.ic_archive_card_back
                     )
                 }
-//                items(list11){
-//                    Achievement(title = it.first, photo = it.second)
-//                }
-//                items(list12){
-//                    RealStateObj(title = it.first, photos = it.second, navigator = navigator)
-//                }
             }
         }
     }
 
     @Composable
     private fun HeaderProfileInfo(modifier: Modifier = Modifier){
-        var progress by remember { mutableStateOf(0.45f)}
+        var progress by rememberSaveable { mutableStateOf(0.45f)}
         var progressBarColor = Color.Green
         if(progress < 0.5f){
             progressBarColor = Color.Red
@@ -111,12 +115,13 @@ class ProfileScreen(
                 modifier = modifier.fillMaxWidth()
             ) {
                 Image(
-                    painter = painterResource(Res.drawable.ic_test_profile),
+                    painter = rememberImagePainter(currentUser?.photos?.first() ?: ""),
                     contentDescription = null,
+                    contentScale = ContentScale.FillHeight,
                     modifier = Modifier
+                        .height(height = 200.dp)
                         .clip(CircleShape)
                         .align(Alignment.Center)
-                        .size(height = 250.dp, width = 190.dp)
                 )
                 Column(
                     modifier = Modifier.align(Alignment.TopEnd)
@@ -126,20 +131,23 @@ class ProfileScreen(
                         contentDescription = null,
                         modifier = Modifier
                             .size(35.dp)
-                            .align(Alignment.CenterHorizontally)
+                            .align(Alignment.CenterHorizontally),
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "112 т.р.",
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
             Text(
-                text = "Курбанов Артем Евгеньевич",
+                text = "${currentUser?.last_name} ${currentUser?.first_name} ${currentUser?.middle_name}",
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Column(
                 modifier = Modifier
@@ -153,36 +161,36 @@ class ProfileScreen(
                     modifier = Modifier,
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.size(4.dp))
                 LinearProgressIndicator(
-                    progress = { 0.2f },
+                    progress = { progress },
                     color = progressBarColor,
                     modifier = Modifier.fillMaxSize(0.4f)
                 )
                 Spacer(modifier = Modifier.size(4.dp))
             }
-            Column(
+            Column (
                 modifier = Modifier
                     .clip(MaterialTheme.shapes.medium)
                     .fillMaxWidth()
-                    .background(Color.LightGray)
-                    .padding(16.dp)
+                    .padding(16.dp),
             ) {
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(text = "Телефон:")
-                    Text(text = "+7 900 241 09 81")
+                    Text(text = currentUser?.phone ?: "Отсутствует")
                 }
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(text = "Дата рождения:")
-                    Text(text = "10.09.2003 г.")
+                    Text(text = "Почта:")
+                    Text(text = currentUser?.email ?: "Отсутствует")
                 }
             }
         }
@@ -203,6 +211,7 @@ fun ArchiveBox(
         elevation = CardDefaults.cardElevation(
             defaultElevation = 5.dp
         ),
+        colors = CardDefaults.cardColors(),
         modifier = Modifier
             .fillMaxWidth()
             .height(100.dp)

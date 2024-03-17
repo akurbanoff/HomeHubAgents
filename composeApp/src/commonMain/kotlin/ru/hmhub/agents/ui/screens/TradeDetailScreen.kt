@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,17 +17,26 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -34,19 +44,27 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.Navigator
 import org.jetbrains.compose.resources.painterResource
+import ru.hmhub.agents.data.in_memory.InMemoryHelper
 import ru.hmhub.agents.ui.screens.general_ui_elements.DefaultTopAppBar
+import ru.hmhub.agents.ui.view_models.RemoteViewModel
+import kotlin.math.absoluteValue
 
 class TradeDetailScreen(
     val id: Int,
-    val navigator: Navigator
+    val navigator: Navigator,
+    val inMemoryHelper: InMemoryHelper,
+    val remoteViewModel: RemoteViewModel
 ) : Screen {
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
     override fun Content() {
         val title = "Архив Сделок"
         val tradeObj = list12[id]
+        val pagerState = rememberPagerState(pageCount = {tradeObj.second.size})
+        var photoId by rememberSaveable{ mutableIntStateOf(0) }
+
         Scaffold(
-            topBar = { DefaultTopAppBar(title = title, navigator = navigator)},
+            topBar = { DefaultTopAppBar(title = title, navigator = navigator, inMemoryHelper = inMemoryHelper, remoteViewModel = remoteViewModel)},
             modifier = Modifier.padding(16.dp)
         ) {
             LazyColumn(
@@ -66,49 +84,67 @@ class TradeDetailScreen(
                     )
                 }
                 item {
-                    HorizontalPager(
-                        state = rememberPagerState {tradeObj.second.size}
-                    ) { photoId ->
-                        Box(modifier = Modifier.fillMaxWidth()) {
-                            Image(
-                                painter = painterResource(tradeObj.second[photoId]),
-                                contentDescription = null,
+                    Column (modifier = Modifier.fillMaxWidth()) {
+                        HorizontalPager(
+                            state = pagerState,
+                            contentPadding = PaddingValues(horizontal = 10.dp)
+                        ) { currentPhotoId ->
+                            photoId = currentPhotoId
+                            val pageOffset =
+                                (pagerState.currentPage - photoId) + pagerState.currentPageOffsetFraction
+
+                            val scaleFactor = 0.75f + (1f - 0.75f) * (1f - pageOffset.absoluteValue)
+
+                            Box(
                                 modifier = Modifier
-                                    .clip(MaterialTheme.shapes.medium)
-                                    .align(Alignment.Center)
-                                    .fillMaxWidth()
-                                    .height(230.dp),
-                                contentScale = ContentScale.FillBounds
-                            )
-                            Row(
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .padding(vertical = 8.dp)
-                                    .align(Alignment.BottomCenter),
-                                //.background(Color.White),
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                repeat(tradeObj.second.size){index ->
-                                    val color = if(index == photoId) Color.Black else Color.White
-                                    val isCurrent = index == photoId
-                                    Icon(
-                                        imageVector = if(isCurrent) Icons.Default.Circle else Icons.Default.Circle,
-                                        contentDescription = null,
-                                        tint = color,
-                                        modifier = Modifier
-                                            .size(30.dp)
-                                            .padding(horizontal = 8.dp)
+                                    .graphicsLayer {
+                                        scaleX = scaleFactor
+                                        scaleY = scaleFactor
+                                    }
+                                    .alpha(
+                                        scaleFactor.coerceIn(0f, 1f)
                                     )
-                                }
+                                    //.padding(10.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                            ) {
+                                Image(
+                                    painter = painterResource(tradeObj.second[photoId]),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .clip(MaterialTheme.shapes.medium)
+                                        .height(230.dp),
+                                    contentScale = ContentScale.Crop
+                                )
                             }
                         }
+//                        Row(
+//                            modifier = Modifier
+//                                .clip(CircleShape)
+//                                .padding(vertical = 8.dp)
+//                                .align(Alignment.CenterHorizontally),
+//                            //.background(Color.White),
+//                            horizontalArrangement = Arrangement.Center
+//                        ) {
+//                            repeat(tradeObj.second.size) { index ->
+//                                val color = if (index == photoId) Color.Black else Color.White
+//                                val isCurrent = index == photoId
+//                                Icon(
+//                                    imageVector = Icons.Default.Circle,
+//                                    contentDescription = null,
+//                                    tint = color,
+//                                    modifier = Modifier
+//                                        .size(25.dp)
+//                                        .padding(horizontal = 8.dp)
+//                                )
+//                            }
+//                        }
                     }
-                    Column(
+                    Column (
                         modifier = Modifier
+                            .clip(MaterialTheme.shapes.medium)
                             .padding(top = 12.dp)
                             .fillMaxWidth()
-                            .background(color = Color.LightGray, shape = MaterialTheme.shapes.medium)
-                            .padding(12.dp)
+                            .padding(12.dp),
                     ) {
                         RealStateDesc(name = "Кол-во комнат:", value = "1")
                         RealStateDesc(name = "Площадь общая, м2:", value = "43,2")

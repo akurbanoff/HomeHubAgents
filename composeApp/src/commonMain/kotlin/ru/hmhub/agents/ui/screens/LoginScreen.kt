@@ -1,5 +1,6 @@
 package ru.hmhub.agents.ui.screens
 
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,11 +20,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowRightAlt
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenuItem
@@ -32,6 +38,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -41,6 +48,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,19 +62,25 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import cafe.adriel.voyager.transitions.SlideTransition
+import com.seiko.imageloader.rememberImagePainter
 import homehubagents.composeapp.generated.resources.Res
 import homehubagents.composeapp.generated.resources.ic_homehub
 import homehubagents.composeapp.generated.resources.ic_homehub_main
 import org.jetbrains.compose.resources.painterResource
+import ru.hmhub.agents.data.in_memory.InMemoryHelper
 import ru.hmhub.agents.data.remote.serializables.EmployeeSerializable
 import ru.hmhub.agents.ui.screens.general_ui_elements.ElementDivider
 import ru.hmhub.agents.ui.screens.general_ui_elements.ScreenError
 import ru.hmhub.agents.ui.screens.general_ui_elements.ScreenLoading
 import ru.hmhub.agents.ui.states.UiState
 import ru.hmhub.agents.ui.view_models.RemoteViewModel
+import ru.hmhub.agents.utils.BiometricAuth
+import kotlin.random.Random
 
 class LoginScreen(
-    val remoteViewModel: RemoteViewModel
+    val remoteViewModel: RemoteViewModel,
+    val inMemoryHelper: InMemoryHelper
 ): Screen {
 
     @Composable
@@ -74,11 +88,31 @@ class LoginScreen(
         val navigator: Navigator = LocalNavigator.currentOrThrow
         val authState by remoteViewModel.authState.collectAsState()
 
-        var userName = remember{ mutableStateOf("") }
-        var password = remember{ mutableStateOf("") }
-        val isPasswordCorrect = remember{ mutableStateOf(true) }
-        var userId = remember { mutableStateOf(999) }
-        val onLoginClicked = remember { mutableStateOf(false) }
+        var userName = rememberSaveable{ mutableStateOf("") }
+        var password = rememberSaveable{ mutableStateOf("") }
+        val isPasswordCorrect = rememberSaveable{ mutableStateOf(true) }
+        var userId = rememberSaveable { mutableStateOf(999) }
+        val onLoginClicked = rememberSaveable { mutableStateOf(false) }
+        val currentUser = remember { mutableListOf<EmployeeSerializable>() }
+        var countSuccessTimes by rememberSaveable { mutableStateOf(0) }
+        val biometricAuthEnable = rememberSaveable { mutableStateOf(false) }
+        val rememberMe = rememberSaveable { mutableStateOf(inMemoryHelper.getUserId() != 999) }
+
+        if(biometricAuthEnable.value && currentUser.firstOrNull() != null){
+            BiometricAuth(
+                onSuccess = {
+                    if(countSuccessTimes < 1){
+                        countSuccessTimes += 1
+                        inMemoryHelper.saveUserId(userId.value)
+                        navigator.popAll()
+                        navigator.push(NewsScreen(inMemoryHelper = inMemoryHelper, remoteViewModel = remoteViewModel))
+                    }
+                },
+                onError = {
+                    biometricAuthEnable.value = false
+                }
+            )
+        }
 
         when(val state = authState.employeeState){
             is UiState.Error -> ScreenError(error = state.throwable, onRefresh = { remoteViewModel.getEmployees() })
@@ -92,7 +126,10 @@ class LoginScreen(
                     userId = userId,
                     password = password,
                     onLoginClicked = onLoginClicked,
-                    isPasswordCorrect = isPasswordCorrect
+                    isPasswordCorrect = isPasswordCorrect,
+                    rememberMe = rememberMe,
+                    currentUser = currentUser,
+                    biometricAuthEnable = biometricAuthEnable
                 )
             }
         }
@@ -100,10 +137,20 @@ class LoginScreen(
             when (val state = authState.checkPasswordState) {
                 is UiState.Error -> isPasswordCorrect.value = false
                 is UiState.Loading -> ScreenLoading()
-                is UiState.Success<*> -> remember{{
-                    navigator.pop()
-                    navigator.push(NewsScreen(navigator))
-                }}
+                is UiState.Success<*> -> {
+                    if(countSuccessTimes < 1){
+                        countSuccessTimes += 1
+                        if(rememberMe.value && currentUser.firstOrNull() != null){
+                            inMemoryHelper.saveUserId(userId.value)
+                            inMemoryHelper.saveUser(currentUser.first())
+                        } else if(!rememberMe.value){
+                            inMemoryHelper.deleteUserId()
+                            inMemoryHelper.saveUser(currentUser.first())
+                        }
+                        navigator.popAll()
+                        navigator.push(NewsScreen(inMemoryHelper = inMemoryHelper, remoteViewModel = remoteViewModel))
+                    }
+                }
             }
         }
     }
@@ -117,7 +164,10 @@ class LoginScreen(
         userId: MutableState<Int>,
         password: MutableState<String>,
         onLoginClicked: MutableState<Boolean>,
-        isPasswordCorrect: MutableState<Boolean>
+        isPasswordCorrect: MutableState<Boolean>,
+        rememberMe: MutableState<Boolean>,
+        currentUser: MutableList<EmployeeSerializable>,
+        biometricAuthEnable: MutableState<Boolean>
     ){
         Column(
             modifier = Modifier
@@ -134,15 +184,27 @@ class LoginScreen(
                 userName = userName,
                 password = password,
                 onLoginClicked = onLoginClicked,
-                isPasswordCorrect = isPasswordCorrect
+                isPasswordCorrect = isPasswordCorrect,
+                currentUser = currentUser
             )
-            ForgotPassword(modifier = Modifier.align(Alignment.End).padding(top = 16.dp))
-            Spacer(modifier = Modifier.fillMaxHeight(0.25f))
+            Helper(
+                modifier = Modifier.padding(top = 16.dp),
+                rememberMe = rememberMe
+            )
+            Icon(
+                imageVector = Icons.Default.Fingerprint,
+                contentDescription = null,
+                modifier = Modifier.clickable {
+                    biometricAuthEnable.value = true
+                }.align(Alignment.End).size(44.dp)
+            )
+            Spacer(modifier = Modifier.fillMaxHeight(0.15f))
             Button(
                 onClick = {navigator.push(RegistrationScreen(
                     navigator = navigator,
                     remoteViewModel = remoteViewModel,
-                    employeesList = employeesList
+                    employeesList = employeesList,
+                    inMemoryHelper = inMemoryHelper
                 ))},
                 shape = RoundedCornerShape(topEnd = 1000.dp, bottomEnd = 1000.dp, topStart = 0.dp, bottomStart = 0.dp),
                 modifier = Modifier.height(80.dp) // width = 200.dp
@@ -174,11 +236,12 @@ class LoginScreen(
                 text = "Вход",
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.displaySmall,
+                color = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier
                     .fillMaxWidth(0.8f)
                     .align(Alignment.End)
                     .background(
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.primary,
                         shape = RoundedCornerShape(topStart = 1000.dp, bottomStart = 1000.dp)
                     )
                     .padding(10.dp)
@@ -187,11 +250,28 @@ class LoginScreen(
     }
 
     @Composable
-    private fun ForgotPassword(modifier: Modifier = Modifier){
-        Text(
-            text = "forgot password?",
-            modifier = modifier
-        )
+    private fun Helper(modifier: Modifier = Modifier, rememberMe: MutableState<Boolean>){
+        Row(
+            modifier = modifier.fillMaxWidth().padding(start = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = rememberMe.value,
+                    onCheckedChange = {
+                        rememberMe.value = !rememberMe.value
+                                      },
+                    colors = CheckboxDefaults.colors()
+                )
+                Text("запомнить меня")
+            }
+            Text(
+                text = "забыл пароль?"
+            )
+        }
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -205,10 +285,11 @@ class LoginScreen(
         userId: MutableState<Int>,
         password: MutableState<String>,
         onLoginClicked: MutableState<Boolean>,
-        isPasswordCorrect: MutableState<Boolean>
+        isPasswordCorrect: MutableState<Boolean>,
+        currentUser: MutableList<EmployeeSerializable>
     ){
-        var openExpandedMenu by remember { mutableStateOf(false) }
-        var isPasswordVisible by remember { mutableStateOf(false) }
+        var openExpandedMenu by rememberSaveable { mutableStateOf(false) }
+        var isPasswordVisible by rememberSaveable { mutableStateOf(false) }
 
         Box(modifier = modifier.fillMaxWidth()) {
             Column {
@@ -221,12 +302,22 @@ class LoginScreen(
                     TextField(
                         value = userName.value,
                         readOnly = true,
+                        label = {Text(text = "Агент")},
                         onValueChange = {openExpandedMenu = true},
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Gray,
-                            unfocusedContainerColor = Color.Gray,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                             unfocusedIndicatorColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent
+                            focusedIndicatorColor = Color.Transparent,
+                            errorContainerColor = MaterialTheme.colorScheme.errorContainer,
+                            errorIndicatorColor = Color.Transparent,
+                            unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unfocusedTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
                         ),
                         leadingIcon = {
                             Icon(
@@ -251,13 +342,25 @@ class LoginScreen(
                         employeesList.forEach { item ->
                             item as EmployeeSerializable
                             val name = "${item.last_name} ${item.first_name} ${item.middle_name}"
+                            currentUser.clear()
+                            currentUser.add(item)
+                            //inMemoryHelper.saveUser(item)
                             DropdownMenuItem(
                                 onClick = {
                                     userName.value = name
                                     userId.value = item.id
                                     openExpandedMenu = false
                                 },
-                                text = { Text(text = name) }
+                                text = { Text(text = name) },
+                                leadingIcon = {
+                                    Image(
+                                        painter = rememberImagePainter(item.photos?.first() ?: ""),
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .clip(CircleShape)
+                                    )
+                                }
                             )
                         }
                     }
@@ -269,11 +372,9 @@ class LoginScreen(
                         password.value = it
                         isPasswordCorrect.value = true
                     },
+                    label = {Text(text = "Пароль")},
                     visualTransformation = if(isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(mask = '*'),
                     isError = if(isPasswordCorrect.value) false else true,
-                    supportingText = {
-                        if(!isPasswordCorrect.value) Text("Вы ввели неправильный пароль")
-                    },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Lock,
@@ -292,17 +393,25 @@ class LoginScreen(
                         )
                     },
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.Gray,
-                        unfocusedContainerColor = Color.Gray,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                         unfocusedIndicatorColor = Color.Transparent,
                         focusedIndicatorColor = Color.Transparent,
-                        errorContainerColor = Color.Red,
-                        errorIndicatorColor = Color.Transparent
+                        errorContainerColor = MaterialTheme.colorScheme.errorContainer,
+                        errorIndicatorColor = Color.Transparent,
+                        unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        focusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        focusedTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unfocusedTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
                     ),
                     shape = RoundedCornerShape(bottomEnd = 1000.dp, topStart = 0.dp, bottomStart = 0.dp),
                     modifier = Modifier
                         .fillMaxWidth(0.9f)
                 )
+                if(!isPasswordCorrect.value) Text("Вы ввели неправильный пароль", color = MaterialTheme.colorScheme.error)
             }
             Button(
                 onClick = {
@@ -313,7 +422,11 @@ class LoginScreen(
                     .align(Alignment.CenterEnd)
                     .size(70.dp),
                 shape = CircleShape,
-                contentPadding = PaddingValues(8.dp)
+                contentPadding = PaddingValues(8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowRightAlt,

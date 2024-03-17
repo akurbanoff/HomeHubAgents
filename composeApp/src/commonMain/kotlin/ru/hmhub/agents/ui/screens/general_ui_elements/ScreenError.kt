@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -16,8 +18,14 @@ fun ScreenError(error: Throwable, onRefresh: () -> Unit){
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = error.message ?: "Something wrong")
-        Button(onClick = onRefresh){
+        Text(text = error.message ?: "Something wrong", color = MaterialTheme.colorScheme.error)
+        Button(
+            onClick = onRefresh,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
+        ){
             Text(text = "Refresh")
         }
     }

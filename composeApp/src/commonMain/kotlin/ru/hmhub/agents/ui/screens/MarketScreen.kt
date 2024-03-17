@@ -34,20 +34,24 @@ import homehubagents.composeapp.generated.resources.ic_market_car
 import homehubagents.composeapp.generated.resources.ic_market_holiday
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
+import ru.hmhub.agents.data.in_memory.InMemoryHelper
 import ru.hmhub.agents.ui.screens.general_ui_elements.DefaultBottomBar
 import ru.hmhub.agents.ui.screens.general_ui_elements.DefaultTopAppBar
 import ru.hmhub.agents.ui.navigation.NavigationRoutes
+import ru.hmhub.agents.ui.view_models.RemoteViewModel
 
 class MarketScreen(
     val id: Int,
-    val navigator: Navigator
+    val navigator: Navigator,
+    val inMemoryHelper: InMemoryHelper,
+    val remoteViewModel: RemoteViewModel
 ) : Screen {
     @Composable
     override fun Content() {
         val title = "Магазин"
         Scaffold(
-            topBar = { DefaultTopAppBar(title = title, navigator = navigator, isAccountShowable = true) },
-            bottomBar = { DefaultBottomBar(navigator = navigator, currentPage = NavigationRoutes.MarketScreen) },
+            topBar = { DefaultTopAppBar(title = title, navigator = navigator, isAccountShowable = true, inMemoryHelper = inMemoryHelper, remoteViewModel = remoteViewModel) },
+            bottomBar = { DefaultBottomBar(navigator = navigator, currentPage = NavigationRoutes.MarketScreen, inMemoryHelper = inMemoryHelper, remoteViewModel = remoteViewModel) },
             modifier = Modifier.padding(16.dp)
         ) {
             LazyColumn(

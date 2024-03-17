@@ -6,6 +6,11 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.biometric.BiometricManager
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import ru.hmhub.agents.utils.AndroidSharedPreferencesManager
+import ru.hmhub.agents.utils.BiometricAuth
 
 class AndroidApp : Application() {
     companion object {
@@ -22,7 +27,10 @@ class AppActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            App()
+            val sharedPrefs = remember {
+                AndroidSharedPreferencesManager(this.applicationContext)
+            }
+            App(sharedPrefs)
         }
     }
 }

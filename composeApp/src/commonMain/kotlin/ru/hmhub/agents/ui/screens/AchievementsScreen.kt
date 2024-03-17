@@ -50,9 +50,11 @@ import homehubagents.composeapp.generated.resources.ic_hubcoin
 import homehubagents.composeapp.generated.resources.silver
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
+import ru.hmhub.agents.data.in_memory.InMemoryHelper
 import ru.hmhub.agents.ui.screens.general_ui_elements.DefaultBottomBar
 import ru.hmhub.agents.ui.screens.general_ui_elements.DefaultTopAppBar
 import ru.hmhub.agents.ui.navigation.NavigationRoutes
+import ru.hmhub.agents.ui.view_models.RemoteViewModel
 
 val list11 = listOf(
     "Сделать 100 звонков за день" to Res.drawable.br,
@@ -61,7 +63,9 @@ val list11 = listOf(
 )
 
 class AchievementsScreen(
-    val navigator: Navigator
+    val navigator: Navigator,
+    val inMemoryHelper: InMemoryHelper,
+    val remoteViewModel: RemoteViewModel
 ) : Screen {
     @OptIn(ExperimentalFoundationApi::class)
     @Composable
@@ -74,9 +78,10 @@ class AchievementsScreen(
         } else if(progress > 0.5f && progress < 0.75f){
             progressBarColor = Color.Yellow
         }
+        val currentScore = (progress * 6000000).toInt()
         Scaffold(
-            topBar = { DefaultTopAppBar(title = title, navigator = navigator) },
-            bottomBar = { DefaultBottomBar(navigator = navigator, currentPage = NavigationRoutes.AchievementsScreen) },
+            topBar = { DefaultTopAppBar(title = title, navigator = navigator, inMemoryHelper = inMemoryHelper, remoteViewModel = remoteViewModel) },
+            bottomBar = { DefaultBottomBar(navigator = navigator, currentPage = NavigationRoutes.AchievementsScreen, inMemoryHelper = inMemoryHelper, remoteViewModel = remoteViewModel) },
             modifier = Modifier.padding(16.dp)
         ) {
             LazyColumn(
@@ -94,7 +99,8 @@ class AchievementsScreen(
                                 .fillMaxWidth()
                                 .align(Alignment.TopCenter),
                             textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.headlineMedium
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                         Image(
                             painter = painterResource(Res.drawable.ic_achieve_car),
@@ -104,21 +110,16 @@ class AchievementsScreen(
                                 .height(230.dp),
                             contentScale = ContentScale.FillBounds
                         )
-//                    Image(
-//                        painter = painterResource(id = R.drawable.ic_car_scale),
-//                        contentDescription = null,
-//                        modifier = Modifier.align(Alignment.BottomCenter),
-//                        colorFilter = ColorFilter.tint(Color.Black)
-//                    )
                         Text(
-                            text = "${(0.45f) * 6000000} из 6 000 000",
+                            text = "$currentScore из 6 000 000",
                             style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
                                 .padding(bottom = 8.dp)
                         )
                         LinearProgressIndicator(
-                            progress = { 0.45f },
+                            progress = { progress },
                             modifier = Modifier.align(Alignment.BottomCenter),
                             color = progressBarColor,
                         )
@@ -129,7 +130,7 @@ class AchievementsScreen(
                     ArchiveBox(
                         text = "Достижения",
                         itemsAmount = list11.size,
-                        onClick = { navigator.push(AchievementsDetailScreen(navigator = navigator)) },
+                        onClick = { navigator.push(AchievementsDetailScreen(navigator = navigator, inMemoryHelper = inMemoryHelper, remoteViewModel = remoteViewModel)) },
                         image = Res.drawable.ic_achievement_icon_back
                     )
                 }
